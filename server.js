@@ -13,14 +13,12 @@ app.use(express.json());
 
 // Import routes
 const patientsRoutes = require('./routes/patients');
-const doctorsRoutes = require('./routes/doctors');
-const medicinesRoutes = require('./routes/medicines');
 const usersRoutes = require('./routes/auth');
 const prescriptionsRoutes = require('./routes/prescription');
 
 // Use routes
+app.get('/', (req, res) => res.send('Hello from Express on Vercel!'));
 app.use('/api/patients', patientsRoutes);
-app.use('/api/doctors', doctorsRoutes);
 app.use('/api/prescriptions', prescriptionsRoutes);
 app.use('/api/auth', usersRoutes);
 

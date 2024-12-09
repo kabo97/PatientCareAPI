@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const sql = neon(process.env.DATABASE_URL);
 const router = express.Router();
 const SECRET_KEY = process.env.JWT_SECRET
-router.post('/sign', async (req, res) => {
+router.post('/login', async (req, res) => {
     const { id, password } = req.body; // Accept only id and password in the request body
 
     if (!id || !password) {

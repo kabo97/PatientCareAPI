@@ -6,7 +6,7 @@ const sql = neon(process.env.DATABASE_URL);
 const router = express.Router();
 
 router.post('/', async (req, res) => {
-    const { doctorId, patientId, medicines } = req.body;
+    const { doctorId, patientId, serviceTime, severityImpact } = req.body;
 
     try {
         let doctor = await sql`SELECT id FROM auth WHERE id = ${doctorId}`;
@@ -22,20 +22,15 @@ router.post('/', async (req, res) => {
         if (!patientIdDb) {
             return res.status(404).json({ error: 'Patient not found' });
         }
+        const serviceTimeDb = serviceTime || '00:04:59';
+        const severityImpactDb = severityImpact || 1;
         const prescription = await sql`
-            INSERT INTO prescriptions (doctor_id, patient_id)
-            VALUES (${doctorIdDb}, ${patientIdDb}) RETURNING id
+            INSERT INTO prescriptions (doctor_id, patient_id, service_time, severity_impact)
+            VALUES (${doctorIdDb}, ${patientIdDb}, ${serviceTimeDb}, ${severityImpactDb}) RETURNING id
         `;
-        const prescriptionId = prescription[0].id;
 
-        for (const med of medicines) {
-            await sql`
-                INSERT INTO medicines (prescription_id, name, quantity, dosage)
-                VALUES (${prescriptionId}, ${med.name}, ${med.quantity}, ${med.dosage})
-            `;
-        }
 
-        res.status(201).json({ message: 'Prescription and medicines added successfully' });
+        res.status(201).json({ message: 'Prescription added successfully' , id: prescription[0].id });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to insert prescription data', details: err.message });

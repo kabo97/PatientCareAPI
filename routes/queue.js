@@ -21,53 +21,56 @@ router.get('/', async (req, res) => {
 
 // Add to queue
 router.post('/', async (req, res) => {
-  const {
-    queueNumber,
-    prescriptionId,
-    patientId,
-    medicines,
-    waitTime,
-    servedTime,
-    entryTime,
-    severityImpact
-  } = req.body;
+  const { queueNumber, prescriptionId, patientId, medicines, waitTime, servedTime, entryTime } = req.body;
 
   try {
-    const result = await db.query(
-      `INSERT INTO queue (
-        ticket_number,
-        prescription_id,
-        patient_id,
-        medicines,
-        wait_time,
-        served_time,
-        entry_time,
-        severity_impact,
-        status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [
-        queueNumber,
-        prescriptionId,
-        patientId,
-        JSON.stringify(medicines),
-        waitTime,
-        servedTime,
-        entryTime,
-        severityImpact,
-        'processing'
-      ]
-    );
+    // Validate prescription exists
+    const prescriptionExists = await sql`
+    SELECT id 
+    FROM prescriptions 
+    WHERE id = ${prescriptionId}`;
 
-    // Emit socket event for new queue entry
-    const io = req.app.get('io');
-    io.emit('queueUpdate', { type: 'add', data: result.rows[0] });
+    if (prescriptionExists.length === 0) {
+      return res.status(404).json({ message: `Prescription ${prescriptionId} does not exist` });
+    }
 
-    res.status(201).json({ data: result.rows[0] });
+    // Convert medicines array to JSONB
+    const medicinesJson = JSON.stringify(medicines);
+
+    const newEntry = await sql`
+    INSERT INTO queue (
+      queueNumber, 
+      prescription_id, 
+      patient_id, 
+      status, 
+      medicines, 
+      wait_time, 
+      served_time, 
+      entry_time
+    )
+    VALUES (
+      ${queueNumber}, 
+      ${prescriptionId}, 
+      ${patientId}, 
+      'waiting', 
+      ${medicinesJson}::jsonb, 
+      ${waitTime}::time, 
+      ${servedTime}::time, 
+      ${waitTime}::interval
+    )
+    RETURNING *`;
+
+    res.status(201).json({ message: 'New queue entry added', data: newEntry });
   } catch (error) {
     console.error('Error adding to queue:', error);
-    res.status(500).json({ error: 'Failed to add to queue' });
+    res.status(500).json({ 
+      message: 'Failed to add new entry to queue', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+    });
   }
 });
+
 
 // Update queue status
 router.put('/:id', async (req, res) => {

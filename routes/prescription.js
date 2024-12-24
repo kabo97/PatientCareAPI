@@ -40,26 +40,76 @@ router.post('/', async (req, res) => {
 
         while (!isUnique) {
             prescriptionNumber = generatePrescriptionNumber();
-            const existing = await sql`SELECT prescription_id FROM prescriptions WHERE prescription_id = ${prescriptionNumber}`;
+            const existing = await sql`SELECT id FROM prescriptions WHERE id = ${prescriptionNumber}`;
             if (existing.length === 0) {
                 isUnique = true;
             }
         }
 
         const prescription = await sql`
-            INSERT INTO prescriptions (prescription_id, patient_id, doctor_id, service_time, severity_impact)
+            INSERT INTO prescriptions (id, patient_id, doctor_id, service_time, severity_impact)
             VALUES (${prescriptionNumber}, ${patientIdDb}, ${doctorIdDb}, ${serviceTimeDb}, ${severityImpactDb})
-            RETURNING prescription_id
+            RETURNING id, patient_id, doctor_id, service_time, severity_impact
         `;
 
         res.status(201).json({
             message: 'Prescription added successfully',
-            id: prescription[0].prescription_id,
-            prescriptionNumber: prescriptionNumber
+            data: {
+                id: prescription[0].id,
+                patient_id: prescription[0].patient_id,
+                doctor_id: prescription[0].doctor_id,
+                service_time: prescription[0].service_time,
+                severity_impact: prescription[0].severity_impact
+            }
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to insert prescription data', details: err.message });
+        console.error('Error inserting prescription:', err);
+        res.status(500).json({ 
+            error: 'Failed to insert prescription data',
+            details: err.message
+        });
+    }
+});
+
+// Get prescription by ID
+router.get('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const prescription = await sql`
+            SELECT p.*, m.name as medicine_name, m.dosage, m.frequency
+            FROM prescriptions p
+            LEFT JOIN prescription_medicines pm ON p.id = pm.prescription_id
+            LEFT JOIN medicines m ON pm.medicine_id = m.id
+            WHERE p.id = ${id}
+        `;
+
+        if (prescription.length === 0) {
+            return res.status(404).json({ error: 'Prescription not found' });
+        }
+
+        // Group medicines
+        const medicines = prescription
+            .filter(p => p.medicine_name)
+            .map(p => ({
+                name: p.medicine_name,
+                dosage: p.dosage,
+                frequency: p.frequency
+            }));
+
+        const result = {
+            id: prescription[0].id,
+            patient_id: prescription[0].patient_id,
+            doctor_id: prescription[0].doctor_id,
+            service_time: prescription[0].service_time,
+            severity_impact: prescription[0].severity_impact,
+            medicines
+        };
+
+        res.json({ data: result });
+    } catch (err) {
+        console.error('Error getting prescription:', err);
+        res.status(500).json({ error: 'Failed to get prescription data' });
     }
 });
 
@@ -68,9 +118,9 @@ router.get('/:id', async (req, res) => {
 
     try {
         const prescription = await sql`
-            SELECT prescription_id, patient_id, doctor_id, severity_impact, service_time, created_at
+            SELECT id, patient_id, doctor_id, severity_impact, service_time, created_at
             FROM prescriptions
-            WHERE prescription_id = ${prescriptionId}
+            WHERE id = ${prescriptionId}
         `;
 
         if (prescription.length === 0) {
@@ -79,12 +129,12 @@ router.get('/:id', async (req, res) => {
 
         res.status(200).json({
             data: {
-                prescriptionId: prescription[0].prescription_id,
-                patientId: prescription[0].patient_id,
-                doctorId: prescription[0].doctor_id,
-                severityImpact: prescription[0].severity_impact,
-                serviceTime: prescription[0].service_time,
-                createdAt: prescription[0].created_at
+                id: prescription[0].id,
+                patient_id: prescription[0].patient_id,
+                doctor_id: prescription[0].doctor_id,
+                severity_impact: prescription[0].severity_impact,
+                service_time: prescription[0].service_time,
+                created_at: prescription[0].created_at
             }
         });
     } catch (err) {
@@ -104,8 +154,8 @@ router.post('/notify', async (req, res) => {
         }
 
         const prescription = await sql`
-            SELECT prescription_id FROM prescriptions 
-            WHERE prescription_id = ${prescriptionNumber} 
+            SELECT id FROM prescriptions 
+            WHERE id = ${prescriptionNumber} 
             AND patient_id = ${patient[0].id}
         `;
 

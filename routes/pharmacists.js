@@ -23,27 +23,54 @@ router.post('/queue/add', async (req, res) => {
   const { queueNumber, prescriptionId, patientId, medicines, waitTime, servedTime, entryTime } = req.body;
 
   try {
+    // Validate prescription exists
     const prescriptionExists = await sql`
     SELECT id 
     FROM prescriptions 
     WHERE id = ${prescriptionId}`;
 
-  if (prescriptionExists.length === 0) {
-    return res.status(404).json({ message: `Prescription ${prescriptionId} does not exist` });
-  }
+    if (prescriptionExists.length === 0) {
+      return res.status(404).json({ message: `Prescription ${prescriptionId} does not exist` });
+    }
+
+    // Convert medicines array to JSONB
+    const medicinesJson = JSON.stringify(medicines);
+
     const newEntry = await sql`
-    INSERT INTO queue (queueNumber, prescription_id, patient_id, status, medicines, wait_time, served_time, entry_time)
-    VALUES (${queueNumber}, ${prescriptionId}, ${patientId}, 'waiting', ${medicines}, ${waitTime}, ${servedTime}, ${entryTime})
+    INSERT INTO queue (
+      queueNumber, 
+      prescription_id, 
+      patient_id, 
+      status, 
+      medicines, 
+      wait_time, 
+      served_time, 
+      entry_time
+    )
+    VALUES (
+      ${queueNumber}, 
+      ${prescriptionId}, 
+      ${patientId}, 
+      'waiting', 
+      ${medicinesJson}::jsonb, 
+      ${waitTime}::time, 
+      ${servedTime}::time, 
+      ${entryTime}::timestamp
+    )
     RETURNING *`;
 
     res.status(201).json({ message: 'New queue entry added', data: newEntry });
   } catch (error) {
     console.error('Error adding to queue:', error);
-    res.status(500).json({ message: 'Failed to add new entry to queue', details: error.message });
+    res.status(500).json({ 
+      message: 'Failed to add new entry to queue', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+    });
   }
 });
 
-  // Mark Prescription as Ready
+// Mark Prescription as Ready
 router.post('/complete', async (req, res) => {
   const { prescriptionId } = req.body;
 

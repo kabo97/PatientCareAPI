@@ -55,7 +55,7 @@ router.post('/queue/add', async (req, res) => {
       ${medicinesJson}::jsonb, 
       ${waitTime}::time, 
       ${servedTime}::time, 
-      ${entryTime}::timestamp
+      ${waitTime}::interval
     )
     RETURNING *`;
 

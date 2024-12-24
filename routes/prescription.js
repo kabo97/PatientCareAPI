@@ -72,46 +72,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get prescription by ID
-router.get('/:id', async (req, res) => {
-    const { id } = req.params;
 
-    try {
-        const prescription = await sql`
-            SELECT p.*, m.name as medicine_name, m.dosage, m.frequency
-            FROM prescriptions p
-            LEFT JOIN prescription_medicines pm ON p.id = pm.prescription_id
-            LEFT JOIN medicines m ON pm.medicine_id = m.id
-            WHERE p.id = ${id}
-        `;
-
-        if (prescription.length === 0) {
-            return res.status(404).json({ error: 'Prescription not found' });
-        }
-
-        // Group medicines
-        const medicines = prescription
-            .filter(p => p.medicine_name)
-            .map(p => ({
-                name: p.medicine_name,
-                dosage: p.dosage,
-                frequency: p.frequency
-            }));
-
-        const result = {
-            id: prescription[0].id,
-            patient_id: prescription[0].patient_id,
-            doctor_id: prescription[0].doctor_id,
-            service_time: prescription[0].service_time,
-            severity_impact: prescription[0].severity_impact,
-            medicines
-        };
-
-        res.json({ data: result });
-    } catch (err) {
-        console.error('Error getting prescription:', err);
-        res.status(500).json({ error: 'Failed to get prescription data' });
-    }
-});
 
 router.get('/:id', async (req, res) => {
     const prescriptionId = req.params.id;

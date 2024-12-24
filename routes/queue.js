@@ -5,15 +5,15 @@ const db = require('../db');
 // Get current queue
 router.get('/', async (req, res) => {
   try {
-    const queue = await db.query(
-      'SELECT * FROM queue WHERE status = $1 ORDER BY severity_impact DESC, ticket_number ASC',
-      ['processing']
-    );
-    res.json({ data: queue.rows });
-  } catch (error) {
-    console.error('Error getting queue:', error);
-    res.status(500).json({ error: 'Failed to get queue' });
+    const queue = await sql`SELECT * FROM queue`;
+
+    res.status(201).json(queue);}
+  catch (err) {
+    console.error(err)
+    res.status(500).json({error: 'Failed to get queue from database.', details: err.message})
   }
+    
+  
 });
 
 // Add to queue

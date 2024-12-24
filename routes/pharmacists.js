@@ -5,19 +5,7 @@ require('dotenv').config();
 const sql = neon(process.env.DATABASE_URL);
 const router = express.Router();
 
-// View Queue
-router.get('/queue', async (req, res) => {
-  try {
-    const queue = await sql`SELECT * FROM queue`;
 
-    res.status(201).json(queue);}
-  catch (err) {
-    console.error(err)
-    res.status(500).json({error: 'Failed to get queue from database.', details: err.message})
-  }
-    
-  
-});
 // Add a New Entry to the Queue
 router.post('/queue/add', async (req, res) => {
   const { queueNumber, prescriptionId, patientId, medicines, waitTime, servedTime, entryTime } = req.body;

@@ -5,12 +5,12 @@ require('dotenv').config();
 const sql = neon(process.env.DATABASE_URL);
 const router = express.Router();
 
-// Function to generate prescription number
-function generatePrescriptionNumber(doctorId) {
-    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3 random digits
-    const docIdPart = doctorId.toString().slice(-2).padStart(2, '0'); // Last 2 digits of doctor ID
-    return `RX${docIdPart}${timestamp}${randomDigits}`;
+// Function to generate prescription number (letter + 6 digits)
+function generatePrescriptionNumber() {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+    const randomDigits = Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+    return `${randomLetter}${randomDigits}`;
 }
 
 router.post('/', async (req, res) => {
@@ -33,7 +33,18 @@ router.post('/', async (req, res) => {
 
         const serviceTimeDb = serviceTime || '00:04:59';
         const severityImpactDb = severityImpact || 1;
-        const prescriptionNumber = generatePrescriptionNumber(doctorIdDb);
+        
+        // Generate and verify uniqueness of prescription number
+        let prescriptionNumber;
+        let isUnique = false;
+        
+        while (!isUnique) {
+            prescriptionNumber = generatePrescriptionNumber();
+            const existing = await sql`SELECT id FROM prescriptions WHERE id = ${prescriptionNumber}`;
+            if (existing.length === 0) {
+                isUnique = true;
+            }
+        }
 
         const prescription = await sql`
             INSERT INTO prescriptions (id, doctor_id, patient_id, service_time, severity_impact)

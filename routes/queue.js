@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
   try {
     const queue = await sql`SELECT * FROM queue`;
 
-    res.status(201).json(queue);}
+    res.status(200).json(queue);}
   catch (err) {
     console.error(err)
     res.status(500).json({error: 'Failed to get queue from database.', details: err.message})

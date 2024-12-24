@@ -55,10 +55,54 @@ router.post('/', async (req, res) => {
       ]
     );
 
+    // Emit socket event for new queue entry
+    const io = req.app.get('io');
+    io.emit('queueUpdate', { type: 'add', data: result.rows[0] });
+
     res.status(201).json({ data: result.rows[0] });
   } catch (error) {
     console.error('Error adding to queue:', error);
     res.status(500).json({ error: 'Failed to add to queue' });
+  }
+});
+
+// Update queue status
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { status, servedTime } = req.body;
+
+  try {
+    const result = await db.query(
+      'UPDATE queue SET status = $1, served_time = $2 WHERE id = $3 RETURNING *',
+      [status, servedTime, id]
+    );
+
+    // Emit socket event for status update
+    const io = req.app.get('io');
+    io.emit('queueUpdate', { type: 'update', data: result.rows[0] });
+
+    res.json({ data: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating queue:', error);
+    res.status(500).json({ error: 'Failed to update queue' });
+  }
+});
+
+// Delete from queue
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await db.query('DELETE FROM queue WHERE id = $1 RETURNING *', [id]);
+
+    // Emit socket event for queue deletion
+    const io = req.app.get('io');
+    io.emit('queueUpdate', { type: 'delete', data: result.rows[0] });
+
+    res.json({ data: result.rows[0] });
+  } catch (error) {
+    console.error('Error deleting from queue:', error);
+    res.status(500).json({ error: 'Failed to delete from queue' });
   }
 });
 

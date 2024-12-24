@@ -1,15 +1,36 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 const cronJobs = require('./routes/cronJob');
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+    cors: {
+        origin: "*", // Configure this according to your frontend URL in production
+        methods: ["GET", "POST"]
+    }
+});
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
+// Make io accessible to routes
+app.set('io', io);
 
 // Import routes
 const patientsRoutes = require('./routes/patients');
@@ -18,6 +39,7 @@ const prescriptionsRoutes = require('./routes/prescription');
 const medicinesRoutes = require('./routes/medicines');
 const pharmacistRoutes = require('./routes/pharmacists');
 const metricsRoutes = require('./routes/metrics');
+
 // Use routes
 app.get('/', (req, res) => res.send('Hello from Server'));
 app.use('/api/patients', patientsRoutes);
@@ -27,6 +49,6 @@ app.use('/api/pharmacists', pharmacistRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/medicines', medicinesRoutes);
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { neon } = require('@neondatabase/serverless');
+
+const sql = neon(process.env.DATABASE_URL);
 
 // Get current queue
 router.get('/', async (req, res) => {

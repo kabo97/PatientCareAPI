@@ -5,6 +5,14 @@ require('dotenv').config();
 const sql = neon(process.env.DATABASE_URL);
 const router = express.Router();
 
+// Function to generate prescription number
+function generatePrescriptionNumber(doctorId) {
+    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+    const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3 random digits
+    const docIdPart = doctorId.toString().slice(-2).padStart(2, '0'); // Last 2 digits of doctor ID
+    return `RX${docIdPart}${timestamp}${randomDigits}`;
+}
+
 router.post('/', async (req, res) => {
     const { doctorId, patientId, serviceTime, severityImpact } = req.body;
 
@@ -22,18 +30,57 @@ router.post('/', async (req, res) => {
         if (!patientIdDb) {
             return res.status(404).json({ error: 'Patient not found' });
         }
+
         const serviceTimeDb = serviceTime || '00:04:59';
         const severityImpactDb = severityImpact || 1;
+        const prescriptionNumber = generatePrescriptionNumber(doctorIdDb);
+
         const prescription = await sql`
-            INSERT INTO prescriptions (doctor_id, patient_id, service_time, severity_impact)
-            VALUES (${doctorIdDb}, ${patientIdDb}, ${serviceTimeDb}, ${severityImpactDb}) RETURNING id
+            INSERT INTO prescriptions (id, doctor_id, patient_id, service_time, severity_impact)
+            VALUES (${prescriptionNumber}, ${doctorIdDb}, ${patientIdDb}, ${serviceTimeDb}, ${severityImpactDb})
+            RETURNING id
         `;
 
-
-        res.status(201).json({ message: 'Prescription added successfully' , id: prescription[0].id });
+        res.status(201).json({ 
+            message: 'Prescription added successfully',
+            id: prescription[0].id,
+            prescriptionNumber: prescriptionNumber
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to insert prescription data', details: err.message });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    const prescriptionId = req.params.id;
+
+    try {
+        const prescription = await sql`
+            SELECT p.*, a.name as doctor_name
+            FROM prescriptions p
+            LEFT JOIN auth a ON p.doctor_id = a.id
+            WHERE p.id = ${prescriptionId}
+        `;
+
+        if (prescription.length === 0) {
+            return res.status(404).json({ error: 'Prescription not found' });
+        }
+
+        res.status(200).json({ 
+            data: {
+                prescriptionId: prescription[0].id,
+                patientId: prescription[0].patient_id,
+                doctorId: prescription[0].doctor_id,
+                doctorName: prescription[0].doctor_name,
+                severityImpact: prescription[0].severity_impact,
+                serviceTime: prescription[0].service_time,
+                createdAt: prescription[0].created_at
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to fetch prescription', details: err.message });
     }
 });
 

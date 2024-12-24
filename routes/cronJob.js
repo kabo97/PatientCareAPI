@@ -3,7 +3,7 @@ const { neon } = require('@neondatabase/serverless');
 require('dotenv').config();
 
 const sql = neon(process.env.DATABASE_URL);
-cron.schedule('* * * * *', async () => {
+cron.schedule('0 0 * * *', async () => {
     try {
         const queue = await sql`SELECT COUNT(*) AS queue_length FROM queue WHERE status = 'waiting'`;
         const avgServiceTime = await sql`

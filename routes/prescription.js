@@ -31,7 +31,7 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ error: 'Patient not found' });
         }
 
-        const serviceTimeDb = serviceTime || '00:04:59';
+        const serviceTimeDb = '00:04:59';
         const severityImpactDb = severityImpact || 1;
 
         // Generate and verify uniqueness of prescription number

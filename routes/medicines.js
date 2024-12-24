@@ -15,7 +15,7 @@ router.post('/update-stock', async (req, res) => {
     try {
         // Check if the medicine exists and has enough stock
         const [medicine] = await sql`
-            SELECT name, stock_quantity 
+            SELECT name, stock_quantity , used_quantity
             FROM medicines 
             WHERE name = ${medicineName}
         `;
@@ -30,11 +30,14 @@ router.post('/update-stock', async (req, res) => {
 
         // Subtract the needed quantity from the stock
         const updatedStockQuantity = medicine.stock_quantity - neededQuantity;
+        const updatedUsedQuantity = medicine.used_quantity + neededQuantity;
 
         // Update the stock in the database
         await sql`
             UPDATE medicines
-            SET stock_quantity = ${updatedStockQuantity}
+            SET 
+                stock_quantity = ${updatedStockQuantity},
+                used_quantity = ${updatedUsedQuantity}
             WHERE name = ${medicineName}
         `;
 
@@ -58,7 +61,40 @@ router.get('/check-stock', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch stock levels' });
     }
 });
+router.get('/used', async (req, res) => {
+    try {
+        // Fetch all medicines with name and stock_quantity
+        const medicines = await sql`
+            SELECT name, used_quantity 
+            FROM medicines
+        `;
 
+        // Return the result
+        res.status(200).json({
+            data: medicines,
+        });
+    } catch (error) {
+        console.error('Error retrieving medicines:', error);
+        res.status(500).json({ error: 'Failed to retrieve medicines' });
+    }
+});
+router.get('/stock', async (req, res) => {
+    try {
+        // Fetch all medicines with name and stock_quantity
+        const medicines = await sql`
+            SELECT name, stock_quantity 
+            FROM medicines
+        `;
+
+        // Return the result
+        res.status(200).json({
+            data: medicines,
+        });
+    } catch (error) {
+        console.error('Error retrieving medicines:', error);
+        res.status(500).json({ error: 'Failed to retrieve medicines' });
+    }
+});
 
 
 module.exports = router;

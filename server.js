@@ -23,7 +23,7 @@ app.get('/', (req, res) => res.send('Hello from Server'));
 app.use('/api/patients', patientsRoutes);
 app.use('/api/prescriptions', prescriptionsRoutes);
 app.use('/api/auth', usersRoutes);
-app.use('/api/pharmacist', pharmacistRoutes);
+app.use('/api/pharmacists', pharmacistRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/medicines', medicinesRoutes);
 
